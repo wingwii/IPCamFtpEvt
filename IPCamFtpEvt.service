@@ -1,0 +1,15 @@
+[Unit]
+Description=FTP server for IP camera event reporting
+After=network.target
+
+[Service]
+User=nobody
+Group=nobody
+Type=simple
+WorkingDirectory=/nas/services/IPCamFtpEvt
+ExecStart=/usr/share/dotnet/dotnet /nas/services/IPCamFtpEvt/IPCamFtpEvt.dll /nas/services/IPCamFtpEvt/ftpd.conf
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+
