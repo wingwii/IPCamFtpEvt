@@ -78,7 +78,15 @@ namespace IPCamFtpEvt
         private static void InitTimeBase()
         {
             var clock = new HttpGetTime(gHttpTimeServer);
-            clock.GetTimeFromInternet();
+            for (int i = 0; i < 120; ++i)
+            {
+                clock.GetTimeFromInternet();
+                if (clock.IsDownloadOK)
+                {
+                    break;
+                }
+                Thread.Sleep(1000);
+            }
 
             var t1 = clock.LocalTime;
             var t2 = clock.InternetTime;
