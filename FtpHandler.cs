@@ -160,7 +160,7 @@ namespace IPCamFtpEvt
 
             var dataDir = this.DataDirectory;
             var fileName = eventTime.ToString("yyyyMMdd");
-            fileName = Path.Combine(dataDir, fileName + ".log");
+            fileName = Path.Combine(dataDir, fileName + ".txt");
 
             var s = eventTime.ToString("yyyy-MM-dd HH:mm:ss");
             s += ", ";
@@ -174,7 +174,11 @@ namespace IPCamFtpEvt
 
         private void ProcessFtpClientCommand(string command, string commandParam)
         {
-            if (command.Equals("USER", StringComparison.Ordinal))
+            if (command.Equals("NOOP", StringComparison.Ordinal))
+            {
+                this.SendSingleLine("200 OK");
+            }
+            else if (command.Equals("USER", StringComparison.Ordinal))
             {
                 var user = commandParam;
                 var s = "331 Password required for " + user;
@@ -183,6 +187,10 @@ namespace IPCamFtpEvt
             else if (command.Equals("PASS", StringComparison.Ordinal))
             {
                 this.SendSingleLine("230 Logged on");
+            }
+            else if (command.Equals("PWD", StringComparison.Ordinal))
+            {
+                this.SendSingleLine("257 \"/\" is current directory.");
             }
             else if (command.Equals("TYPE", StringComparison.Ordinal))
             {
@@ -219,6 +227,10 @@ namespace IPCamFtpEvt
                 }
                 catch (Exception) { }
                 this.SaveEvent(fileName);
+            }
+            else
+            {
+                this.SendSingleLine("200 OK");
             }
             //
         }
