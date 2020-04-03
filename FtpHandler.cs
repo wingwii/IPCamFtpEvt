@@ -11,6 +11,8 @@ namespace IPCamFtpEvt
         private const int MAX_BUFFER_SIZE = 256;
 
 
+        private static readonly object gLocker = new object();
+
 
         private DateTime mCreatedTime = DateTime.MinValue;        
         private Socket mSock = null;
@@ -30,7 +32,7 @@ namespace IPCamFtpEvt
         }
 
         public int PassiveModeListenPort { get; set; }
-        public TimeSpan InternetTimeDelta { get;set; }
+        public long InternetTimeDelta { get; set; }
         public string DataDirectory { get; set;}
 
         public void Run()
@@ -56,18 +58,14 @@ namespace IPCamFtpEvt
 
             while (true)
             {
+                command = string.Empty;
                 if (!this.RecvFtpClientCommand(ref command, ref commandParam))
                 {
                     break;
                 }
-                if (command.Equals("QUIT", StringComparison.Ordinal))
+                if (!this.ProcessFtpClientCommand(command, commandParam))
                 {
-                    this.SendSingleLine("221 Goodbye");
                     break;
-                }
-                else
-                {                    
-                    this.ProcessFtpClientCommand(command, commandParam);
                 }
             }
             //
@@ -156,7 +154,7 @@ namespace IPCamFtpEvt
         private void SaveEvent(string eventFileName)
         {
             var internetTimeDelta = this.InternetTimeDelta;
-            var eventTime = this.mCreatedTime + internetTimeDelta;
+            var eventTime = this.mCreatedTime.AddSeconds(internetTimeDelta);
 
             var dataDir = this.DataDirectory;
             var fileName = eventTime.ToString("yyyyMMdd");
@@ -169,12 +167,28 @@ namespace IPCamFtpEvt
             s += eventFileName;
             s += "\r\n";
 
-            File.AppendAllText(fileName, s);
+            var buf = Encoding.ASCII.GetBytes(s);
+            lock (gLocker)
+            {
+                using (var f = File.Open(fileName, FileMode.Append, FileAccess.Write, FileShare.Read))
+                {
+                    f.Write(buf, 0, buf.Length);
+                    f.Flush();
+                    f.Close();
+                }
+            }
+
+            //Console.WriteLine(s);
         }
 
-        private void ProcessFtpClientCommand(string command, string commandParam)
+        private bool ProcessFtpClientCommand(string command, string commandParam)
         {
-            if (command.Equals("NOOP", StringComparison.Ordinal))
+            if (command.Equals("QUIT", StringComparison.Ordinal))
+            {
+                this.SendSingleLine("221 Goodbye");
+                return false;
+            }
+            else if (command.Equals("NOOP", StringComparison.Ordinal))
             {
                 this.SendSingleLine("200 OK");
             }
@@ -227,12 +241,13 @@ namespace IPCamFtpEvt
                 }
                 catch (Exception) { }
                 this.SaveEvent(fileName);
+                return false;
             }
             else
             {
                 this.SendSingleLine("200 OK");
             }
-            //
+            return true;
         }
 
 

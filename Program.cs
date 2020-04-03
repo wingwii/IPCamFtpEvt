@@ -17,7 +17,7 @@ namespace IPCamFtpEvt
         private static int gPassiveModeListenPort = 21001;
 
         private static byte[] gDummyBuf = new byte [0x100000];
-        private static TimeSpan gInternetTimeDelta = new TimeSpan();
+        private static long gInternetTimeDelta = 0;
 
 
         static void Main(string[] args)
@@ -90,7 +90,7 @@ namespace IPCamFtpEvt
 
             var t1 = clock.LocalTime;
             var t2 = clock.InternetTime;
-            gInternetTimeDelta = t2 - t1;
+            gInternetTimeDelta = (long)(t2 - t1).TotalSeconds;
         }
 
         private static void StartDummyFtpPasvServer()
